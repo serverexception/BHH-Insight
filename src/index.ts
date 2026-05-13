@@ -2,11 +2,11 @@ import "dotenv/config";
 import fs from "fs";
 import path from "path";
 import { PDFLoader } from "@langchain/community/document_loaders/fs/pdf";
-import { RecursiveCharacterTextSplitter } from "langchain/text_splitter";
+import { RecursiveCharacterTextSplitter } from "@langchain/textsplitters"
 import { OpenAIEmbeddings, ChatOpenAI } from "@langchain/openai";
-import { MemoryVectorStore } from "langchain/vectorstores/memory";
-import { createRetrievalChain } from "langchain/chains/retrieval";
-import { createStuffDocumentsChain } from "langchain/chains/combine_documents";
+import { MemoryVectorStore } from "@langchain/classic/vectorstores/memory";
+import { createRetrievalChain } from "@langchain/classic/chains/retrieval";
+import { createStuffDocumentsChain } from "@langchain/classic/chains/combine_documents";
 import { ChatPromptTemplate } from "@langchain/core/prompts";
 import readline from "readline";
 

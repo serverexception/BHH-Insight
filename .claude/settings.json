@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx tsc *)",
+      "Bash(node -e \"const p = require\\('./package.json'\\); console.log\\(JSON.stringify\\(p.dependencies, null, 2\\)\\)\")",
+      "Bash(node -e \"require\\('@langchain/community/vectorstores/memory'\\)\")",
+      "Bash(node -e \"const m = require\\('langchain'\\); console.log\\(Object.keys\\(m\\).slice\\(0,20\\)\\)\")",
+      "Bash(node -e \"const p = require\\('./node_modules/@langchain/community/package.json'\\); const keys = Object.keys\\(p.exports||{}\\).filter\\(k=>k.includes\\('vector'\\)\\); console.log\\(keys\\)\")",
+      "Bash(node -e \"const p = require\\('./node_modules/langchain/package.json'\\); const keys = Object.keys\\(p.exports||{}\\).filter\\(k=>k.includes\\('vector'\\)||k.includes\\('chain'\\)||k.includes\\('retriev'\\)\\); console.log\\(keys\\)\")",
+      "Bash(node -e \"const p = require\\('./node_modules/langchain/package.json'\\); console.log\\(Object.keys\\(p.exports||{}\\).join\\('\\\\n'\\)\\)\")",
+      "Bash(node -e \"const p = require\\('./node_modules/@langchain/core/package.json'\\); const keys = Object.keys\\(p.exports||{}\\).filter\\(k=>k.includes\\('vector'\\)||k.includes\\('chain'\\)||k.includes\\('retriev'\\)||k.includes\\('memory'\\)\\); console.log\\(keys\\)\")",
+      "Bash(node -e \"const m = require\\('@langchain/core/vectorstores'\\); console.log\\(Object.keys\\(m\\)\\)\")",
+      "Bash(node -e \"const m = require\\('@langchain/core'\\); console.log\\(Object.keys\\(m\\).filter\\(k=>k.toLowerCase\\(\\).includes\\('memory'\\)||k.toLowerCase\\(\\).includes\\('retriev'\\)||k.toLowerCase\\(\\).includes\\('chain'\\)||k.toLowerCase\\(\\).includes\\('stuff'\\)\\)\\)\")",
+      "Bash(node -e \"const p = require\\('./node_modules/@langchain/classic/package.json'\\); const keys = Object.keys\\(p.exports||{}\\).filter\\(k=>k.includes\\('vector'\\)||k.includes\\('chain'\\)||k.includes\\('retriev'\\)||k.includes\\('memory'\\)\\); console.log\\(keys\\)\")"
+    ]
+  }
+}
