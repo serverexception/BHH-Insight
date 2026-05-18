@@ -18,8 +18,10 @@
   },
   "keywords": [],
   "dependencies": {
+    "@langchain/anthropic": "^1.3.29",
     "@langchain/community": "^1.1.28",
     "@langchain/core": "^1.1.46",
+    "@langchain/google-genai": "^2.1.30",
     "@langchain/openai": "^1.4.5",
     "dotenv": "^16.6.1",
     "langchain": "^1.4.0",

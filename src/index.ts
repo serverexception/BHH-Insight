@@ -5,17 +5,21 @@ import { ChatPromptTemplate } from "@langchain/core/prompts";
 import { RecursiveCharacterTextSplitter } from "@langchain/textsplitters";
 import "dotenv/config";
 import readline from "readline";
-
 import { sendReadyMessageToUser as sendReadyMessageToUserAndKeepResponding } from './cli_interaction';
-import * as OpenAI from './models/openAi';
 import { readDocuments } from "./read_pdfs";
+
+import * as Claude from './models/claude'
+import * as OpenAI from './models/openAi'
+import * as Gemini from './models/gemini'
 
 
 const CONFIG = {
   // Add model family here, needs {llm, embeddings}
-  ...OpenAI,
+  ...OpenAI
+  // ...Claude
+  // ...Gemini
   //
-  systemPrompt: `
+  , systemPrompt: `
     Du bist 'BHH-Insight', ein hilfreicher KI-Assistent für Studierende der Beruflichen Hochschule Hamburg (BHH).
     Nutze AUSSCHLIESSLICH den folgenden Kontext aus den Uni-Dokumenten, um die Frage zu beantworten.
     Wenn die Antwort nicht im Kontext steht, sage höflich, dass du das basierend auf den vorliegenden Dokumenten nicht weißt. Erfinde keine Informationen.
@@ -26,7 +30,11 @@ const CONFIG = {
 }
 
 async function main() {
-  console.log("📚 Starte BHH-Insight: Lese Dokumente ein...");
+  console.log("📚 Starte BHH-Insight. ");
+  console.log("Anbieter: ", CONFIG.COMPANY)
+  console.log("Model: ", CONFIG.MODEL)
+
+  console.log("Lese Dokumente ein...")
 
   const { files, rawDocs } = await readDocuments()
 
