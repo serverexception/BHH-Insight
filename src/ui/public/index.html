@@ -180,6 +180,23 @@
       white-space: pre-wrap;
     }
 
+    .msg.bot .sources {
+      margin-top: 0.6rem;
+      padding-top: 0.5rem;
+      border-top: 1px solid #1e2130;
+      font-size: 0.75rem;
+      color: #556;
+    }
+
+    .msg.bot .sources span {
+      display: inline-block;
+      background: #0f1117;
+      border: 1px solid #1e2130;
+      border-radius: 4px;
+      padding: 0.1rem 0.4rem;
+      margin: 0.15rem 0.15rem 0 0;
+    }
+
     .msg.thinking {
       align-self: flex-start;
       background: #13161f;
@@ -279,6 +296,7 @@
   const sendBtn = document.getElementById('send-btn');
 
   let selectedLabels = { family: '', studiengang: '', jahrgang: '' };
+  let streamingBubble = null; // the current bot bubble being streamed into
 
   // ── Setup form ────────────────────────────────
 
@@ -354,6 +372,36 @@
     if (!message.includes('Denke nach')) addMsg('system', message);
   });
 
+  // ── Streaming answer ──────────────────────────
+
+  socket.on('answer_start', () => {
+    removeThinking();
+    streamingBubble = document.createElement('div');
+    streamingBubble.className = 'msg bot';
+    streamingBubble.dataset.text = '';
+    messages.appendChild(streamingBubble);
+    messages.scrollTop = messages.scrollHeight;
+  });
+
+  socket.on('answer_token', ({ token }) => {
+    if (!streamingBubble) return;
+    streamingBubble.dataset.text += token;
+    streamingBubble.textContent = streamingBubble.dataset.text;
+    messages.scrollTop = messages.scrollHeight;
+  });
+
+  socket.on('answer_end', ({ sources }) => {
+    if (streamingBubble && sources && sources.length > 0) {
+      const sourcesEl = document.createElement('div');
+      sourcesEl.className = 'sources';
+      sourcesEl.innerHTML = '📄 ' + sources.map(s => `<span>${s}</span>`).join('');
+      streamingBubble.appendChild(sourcesEl);
+    }
+    streamingBubble = null;
+    setInputEnabled(true);
+    messages.scrollTop = messages.scrollHeight;
+  });
+
   // ── Chat ──────────────────────────────────────
 
   socket.on('ask_text', ({ prompt }) => {
@@ -372,11 +420,6 @@
       selectedLabels.studiengang,
       `JG ${selectedLabels.jahrgang}`,
     ].map(l => `<span class="config-chip">${l}</span>`).join('');
-  });
-
-  socket.on('display_answer', ({ answer }) => {
-    removeThinking();
-    addMsg('bot', answer);
   });
 
   function send() {

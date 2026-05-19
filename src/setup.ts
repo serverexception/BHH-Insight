@@ -1,7 +1,7 @@
 import * as Claude from './models/claude';
 import * as Gemini from './models/gemini';
 import * as OpenAI from './models/openAi';
-import type { Jahrgang, Scope, Studiengang } from './scoping';
+import { STUDIENGANG_CONFIGS, type Jahrgang, type Scope } from './scoping';
 import type { UIAdapter } from './ui/adapter';
 
 export type ModelFamily = typeof OpenAI | typeof Claude | typeof Gemini;
@@ -18,14 +18,14 @@ export const FAMILY_LABELS = [
   "Google Gemini (gemini-2.5-flash)",
 ];
 
-export const STUDIENGAENGE: Studiengang[] = ['informatik', 'marketing'];
-export const STUDIENGANG_LABELS = ["Informatik", "Marketing"];
+export const STUDIENGAENGE = STUDIENGANG_CONFIGS.map(s => s.id);
+export const STUDIENGANG_LABELS = STUDIENGANG_CONFIGS.map(s => s.label);
 
 export const JAHRGAENGE: Jahrgang[] = [2022, 2023, 2024, 2025];
 
-const DEFAULTS = { familyIdx: 0, studiengangIdx: 0, jahrgangIdx: 3 }; // OpenAI · Informatik · 2025
+const DEFAULTS = { familyIdx: 0, studiengangIdx: 0, jahrgangIdx: 3 };
 
-const SG_CODE: Record<string, Studiengang> = { i: 'informatik', m: 'marketing' };
+const SG_CODE = Object.fromEntries(STUDIENGANG_CONFIGS.map(s => [s.code, s.id]));
 
 function parseInput(raw: string): typeof DEFAULTS {
   const result = { ...DEFAULTS };
@@ -34,8 +34,8 @@ function parseInput(raw: string): typeof DEFAULTS {
       result.familyIdx = parseInt(token) - 1;
       continue;
     }
-    const m = token.match(/^([im])(2[2-5])$/);
-    if (m) {
+    const m = token.match(/^([a-z])(2[2-5])$/);
+    if (m && SG_CODE[m[1]!]) {
       const sg = SG_CODE[m[1]!]!;
       const year = parseInt('20' + m[2]) as Jahrgang;
       result.studiengangIdx = STUDIENGAENGE.indexOf(sg);
@@ -46,8 +46,9 @@ function parseInput(raw: string): typeof DEFAULTS {
 }
 
 export async function runSetup(ui: UIAdapter): Promise<SetupResult> {
+  const sgCodes = STUDIENGANG_CONFIGS.map(s => `${s.code}22–${s.code}25 (${s.label})`).join(' · ');
   ui.display("  Anbieter:    1=OpenAI · 2=Claude · 3=Gemini");
-  ui.display("  Studiengang: i22 i23 i24 i25 (Informatik) · m22 m23 m24 m25 (Marketing)");
+  ui.display(`  Studiengang: ${sgCodes}`);
   ui.display("  Defaults:    1 i25\n");
 
   const raw = await ui.askText("  > ");
@@ -58,7 +59,7 @@ export async function runSetup(ui: UIAdapter): Promise<SetupResult> {
   const jahrgang = JAHRGAENGE[jahrgangIdx]!;
   const scope: Scope = { studiengang, jahrgang };
 
-  const sgLabel = studiengang.charAt(0).toUpperCase() + studiengang.slice(1);
+  const sgLabel = STUDIENGANG_LABELS[studiengangIdx]!;
   ui.display(`\n  ✅ ${family.COMPANY} · ${sgLabel} · JG ${jahrgang}\n`);
 
   return { family, scope };

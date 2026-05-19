@@ -35,9 +35,19 @@ export class CliAdapter implements UIAdapter {
     console.log(message);
   }
 
-  displayAnswer(answer: string): void {
+  startAnswer(): void {
     console.log("\n================ ANTWORT ================");
-    console.log(answer);
+  }
+
+  writeAnswerToken(token: string): void {
+    process.stdout.write(token);
+  }
+
+  endAnswer(sources: string[]): void {
+    console.log();
+    if (sources.length > 0) {
+      console.log(`\n📄 Quellen: ${sources.join(", ")}`);
+    }
     console.log("=========================================\n");
   }
 

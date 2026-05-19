@@ -71,8 +71,16 @@ export class WebAdapter implements UIAdapter {
     this.socket?.emit("display", { message: trimmed });
   }
 
-  displayAnswer(answer: string): void {
-    this.socket?.emit("display_answer", { answer });
+  startAnswer(): void {
+    this.socket?.emit("answer_start");
+  }
+
+  writeAnswerToken(token: string): void {
+    this.socket?.emit("answer_token", { token });
+  }
+
+  endAnswer(sources: string[]): void {
+    this.socket?.emit("answer_end", { sources });
   }
 
   async setupForm(config: SetupFormConfig): Promise<SetupFormResult> {

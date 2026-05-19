@@ -7,7 +7,7 @@ import type { Scope } from "./scoping";
 
 type DocumentReturns = {
   files: string[];
-  rawDocs: Document<Record<string, any>>[];
+  rawDocs: Document<Record<string, unknown>>[];
 };
 
 export async function readDocuments(scope: Scope): Promise<DocumentReturns> {
@@ -18,7 +18,7 @@ export async function readDocuments(scope: Scope): Promise<DocumentReturns> {
   ];
 
   const files: string[] = [];
-  const rawDocs: Document<Record<string, any>>[] = [];
+  const rawDocs: Document<Record<string, unknown>>[] = [];
 
   for (const dir of dirs) {
     if (!fs.existsSync(dir)) continue;
@@ -32,8 +32,10 @@ export async function readDocuments(scope: Scope): Promise<DocumentReturns> {
   }
 
   if (files.length === 0) {
-    console.error("❌ Keine PDFs gefunden für den gewählten Scope.");
-    return { files: ["Error"], rawDocs: [] };
+    throw new Error(
+      `Keine PDFs gefunden für Scope: ${scope.studiengang}/${scope.jahrgang}. ` +
+      `Bitte PDFs in data/${scope.studiengang}/ ablegen.`
+    );
   }
 
   return { files, rawDocs };

@@ -69,13 +69,25 @@ erfolgt über ein Formular mit vorausgefüllten Defaults, danach Chat-Interface 
 ## API-Keys
 
 Kopiere `.env.example` zu `.env` und trage deine Keys ein.
-Nicht benötigte Keys können leer bleiben, einfach einen anderen Anbieter wählen.
 
 ```
 OPENAI_API_KEY=...
 ANTHROPIC_API_KEY=...
 GOOGLE_API_KEY=...
 ```
+
+### Welche Keys werden wirklich benötigt?
+
+| Anbieter | LLM-Key | Embedding-Key |
+|---|---|---|
+| **OpenAI** | `OPENAI_API_KEY` | `OPENAI_API_KEY` (gleicher) |
+| **Claude** | `ANTHROPIC_API_KEY` | `OPENAI_API_KEY` **oder** `GOOGLE_API_KEY` (einer reicht) |
+| **Gemini** | `GOOGLE_API_KEY` | `GOOGLE_API_KEY` (gleicher) |
+
+Da Anthropic keine eigene Embedding-API anbietet, erkennt BHH-Insight automatisch welcher Key vorhanden ist und wählt den passenden Embedding-Anbieter:
+- `OPENAI_API_KEY` gesetzt → OpenAI `text-embedding-3-small`
+- `GOOGLE_API_KEY` gesetzt → Google `text-embedding-004`
+- Keiner gesetzt → Fehlermeldung beim Start
 
 ---
 
