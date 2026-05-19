@@ -1,77 +1,104 @@
 import { createStuffDocumentsChain } from "@langchain/classic/chains/combine_documents";
 import { createRetrievalChain } from "@langchain/classic/chains/retrieval";
-import { MemoryVectorStore } from "@langchain/classic/vectorstores/memory";
-import { ChatPromptTemplate } from "@langchain/core/prompts";
+import { InMemoryChatMessageHistory } from "@langchain/core/chat_history";
+import { ChatPromptTemplate, MessagesPlaceholder } from "@langchain/core/prompts";
+// @ts-ignore — deprecated but LangGraph is out of scope for this project
+import { RunnableWithMessageHistory } from "@langchain/core/runnables";
 import { RecursiveCharacterTextSplitter } from "@langchain/textsplitters";
 import "dotenv/config";
-import readline from "readline";
-import { sendReadyMessageToUser as sendReadyMessageToUserAndKeepResponding } from './cli_interaction';
+import { startChatLoop } from './cli_interaction';
+import { RAG_CONFIG } from "./config";
 import { readDocuments } from "./read_pdfs";
+import type { Scope } from "./scoping";
+import {
+  FAMILIES,
+  FAMILY_LABELS,
+  JAHRGAENGE,
+  runSetup,
+  STUDIENGAENGE,
+  STUDIENGANG_LABELS,
+  type ModelFamily,
+} from "./setup";
+import { CliAdapter } from './ui/cli_adapter';
+import { WebAdapter } from './ui/web_adapter';
+import { loadOrBuildVectorStore } from "./vector_cache";
 
-import * as Claude from './models/claude'
-import * as OpenAI from './models/openAi'
-import * as Gemini from './models/gemini'
+const SYSTEM_PROMPT = `
+  Du bist 'BHH-Insight', ein hilfreicher KI-Assistent für Studierende der Beruflichen Hochschule Hamburg (BHH).
+  Nutze AUSSCHLIESSLICH den folgenden Kontext aus den Uni-Dokumenten, um die Frage zu beantworten.
+  Wenn die Antwort nicht im Kontext steht, sage höflich, dass du das basierend auf den vorliegenden Dokumenten nicht weißt. Erfinde keine Informationen.
 
+  Kontext:
+  {context}
+`;
 
-const CONFIG = {
-  // Add model family here, needs {llm, embeddings}
-  ...OpenAI
-  // ...Claude
-  // ...Gemini
-  //
-  , systemPrompt: `
-    Du bist 'BHH-Insight', ein hilfreicher KI-Assistent für Studierende der Beruflichen Hochschule Hamburg (BHH).
-    Nutze AUSSCHLIESSLICH den folgenden Kontext aus den Uni-Dokumenten, um die Frage zu beantworten.
-    Wenn die Antwort nicht im Kontext steht, sage höflich, dass du das basierend auf den vorliegenden Dokumenten nicht weißt. Erfinde keine Informationen.
-    
-    Kontext:
-    {context}
-  `
-}
 
 async function main() {
-  console.log("📚 Starte BHH-Insight. ");
-  console.log("Anbieter: ", CONFIG.COMPANY)
-  console.log("Model: ", CONFIG.MODEL)
+  console.log("📚 BHH-Insight\n");
 
-  console.log("Lese Dokumente ein...")
+  const useWeb = process.argv.includes("--web");
+  let ui: CliAdapter | WebAdapter;
+  let family: ModelFamily;
+  let scope: Scope;
 
-  const { files, rawDocs } = await readDocuments()
+  if (useWeb) {
+    const webUi = new WebAdapter();
+    await webUi.start();
+    ui = webUi;
+    const result = await webUi.setupForm({
+      familyLabels: FAMILY_LABELS,
+      studiengangLabels: STUDIENGANG_LABELS,
+      jahrgangLabels: JAHRGAENGE.map(String),
+      defaults: { familyIdx: 0, studiengangIdx: 0, jahrgangIdx: 3 },
+    });
+    family = FAMILIES[result.familyIdx]!;
+    scope = { studiengang: STUDIENGAENGE[result.studiengangIdx]!, jahrgang: JAHRGAENGE[result.jahrgangIdx]! };
+  } else {
+    ui = new CliAdapter();
+    ({ family, scope } = await runSetup(ui));
+  }
 
-  console.log(`✅ ${files.length} PDF(s) geladen. Text wird verarbeitet...`);
+  ui.display("Lese Dokumente ein...");
+  const { files, rawDocs } = await readDocuments(scope);
+  ui.display(`✅ ${files.length} PDF(s) geladen. Text wird verarbeitet...`);
 
   const textSplitter = new RecursiveCharacterTextSplitter({
-    chunkSize: 1000,
-    chunkOverlap: 200,
+    chunkSize: RAG_CONFIG.chunkSize,
+    chunkOverlap: RAG_CONFIG.chunkOverlap,
   });
   const splitDocs = await textSplitter.splitDocuments(rawDocs);
 
-  const embeddings = CONFIG.embeddings
-  const vectorStore = await MemoryVectorStore.fromDocuments(splitDocs, embeddings);
-  const retriever = vectorStore.asRetriever({ k: 4 });
+  ui.display("Baue Vektordatenbank auf (ggf. aus Cache)...");
+  const vectorStore = await loadOrBuildVectorStore(files, splitDocs, family.embeddings);
+  const retriever = vectorStore.asRetriever({ k: RAG_CONFIG.retrievalK });
 
-  const llm = CONFIG.llm
-
-  const prompt = ChatPromptTemplate.fromMessages([
-    ["system", CONFIG.systemPrompt],
+  // Chat-Historie wird direkt im Antwort-Prompt mitgegeben.
+  // Der Retriever nutzt die aktuelle Frage — der LLM sieht den vollen Verlauf.
+  const answerPrompt = ChatPromptTemplate.fromMessages([
+    ["system", SYSTEM_PROMPT],
+    new MessagesPlaceholder("chat_history"),
     ["human", "{input}"],
   ]);
 
-  const questionAnswerChain = await createStuffDocumentsChain({ llm, prompt });
+  const questionAnswerChain = await createStuffDocumentsChain({ llm: family.llm, prompt: answerPrompt });
   const ragChain = await createRetrievalChain({
     retriever,
     combineDocsChain: questionAnswerChain,
   });
 
-  console.log("✅ Vektordatenbank aufgebaut. BHH-Insight ist bereit!\n");
-  console.log("--------------------------------------------------");
-
-  const cliInterface = readline.createInterface({
-    input: process.stdin,
-    output: process.stdout,
+  // Konversations-Gedächtnis — eine History pro Session
+  const messageHistory = new InMemoryChatMessageHistory();
+  const chainWithHistory = new RunnableWithMessageHistory({
+    runnable: ragChain,
+    getMessageHistory: () => messageHistory,
+    inputMessagesKey: "input",
+    historyMessagesKey: "chat_history",
+    outputMessagesKey: "answer",
   });
 
-  sendReadyMessageToUserAndKeepResponding(cliInterface, ragChain);
+  ui.display("✅ Bereit! BHH-Insight erinnert sich an den bisherigen Gesprächsverlauf.\n");
+
+  await startChatLoop(ui, chainWithHistory);
 }
 
 main().catch(console.error);
