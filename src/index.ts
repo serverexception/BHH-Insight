@@ -7,15 +7,14 @@ import "dotenv/config";
 import { startChatLoop } from './cli_interaction';
 import { readDocuments } from "./read_pdfs";
 import type { Scope } from "./scoping";
-import { filterFiles } from "./scoping";
 import {
   FAMILIES,
   FAMILY_LABELS,
   JAHRGAENGE,
+  runSetup,
   STUDIENGAENGE,
   STUDIENGANG_LABELS,
   type ModelFamily,
-  runSetup,
 } from "./setup";
 import { CliAdapter } from './ui/cli_adapter';
 import { WebAdapter } from './ui/web_adapter';
@@ -41,14 +40,12 @@ async function main() {
     const webUi = new WebAdapter();
     await webUi.start();
     ui = webUi;
-
     const result = await webUi.setupForm({
       familyLabels: FAMILY_LABELS,
       studiengangLabels: STUDIENGANG_LABELS,
       jahrgangLabels: JAHRGAENGE.map(String),
       defaults: { familyIdx: 0, studiengangIdx: 0, jahrgangIdx: 3 },
     });
-
     family = FAMILIES[result.familyIdx]!;
     scope = { studiengang: STUDIENGAENGE[result.studiengangIdx]!, jahrgang: JAHRGAENGE[result.jahrgangIdx]! };
   } else {
@@ -59,9 +56,7 @@ async function main() {
   const CONFIG = { ...family, systemPrompt: SYSTEM_PROMPT };
 
   ui.display("Lese Dokumente ein...");
-
-  const { files, rawDocs } = await readDocuments(file => filterFiles([file], scope).length > 0);
-
+  const { files, rawDocs } = await readDocuments(scope);
   ui.display(`✅ ${files.length} PDF(s) geladen. Text wird verarbeitet...`);
 
   const textSplitter = new RecursiveCharacterTextSplitter({ chunkSize: 1000, chunkOverlap: 200 });

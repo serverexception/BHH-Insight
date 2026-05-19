@@ -3,35 +3,38 @@ import "dotenv/config";
 import fs from "fs";
 import { Document } from "langchain";
 import path from "path";
+import type { Scope } from "./scoping";
 
 type DocumentReturns = {
-    files: string[],
-    rawDocs: Document<Record<string, any>>[]
-}
+  files: string[];
+  rawDocs: Document<Record<string, any>>[];
+};
 
-export async function readDocuments(fileFilter?: (file: string) => boolean): Promise<DocumentReturns> {
-    const dataDir = "./data";
-    const rawDocs = [];
+export async function readDocuments(scope: Scope): Promise<DocumentReturns> {
+  const dirs = [
+    path.join("data", "bhh-weit"),
+    path.join("data", scope.studiengang, "allgemein"),
+    path.join("data", scope.studiengang, String(scope.jahrgang)),
+  ];
 
-    if (!fs.existsSync(dataDir)) {
-        console.error(`❌ Der Ordner '${dataDir}' existiert nicht. Bitte anlegen und PDFs hineinlegen!`);
-        return { files: ["Error"], rawDocs: [] }
+  const files: string[] = [];
+  const rawDocs: Document<Record<string, any>>[] = [];
+
+  for (const dir of dirs) {
+    if (!fs.existsSync(dir)) continue;
+    const pdfs = fs.readdirSync(dir).filter(f => f.endsWith(".pdf"));
+    for (const file of pdfs) {
+      const filePath = path.join(dir, file);
+      const docs = await new PDFLoader(filePath).load();
+      rawDocs.push(...docs);
+      files.push(filePath);
     }
+  }
 
-    const allFiles = fs.readdirSync(dataDir).filter(file => file.endsWith(".pdf"));
-    const files = fileFilter ? allFiles.filter(fileFilter) : allFiles;
+  if (files.length === 0) {
+    console.error("❌ Keine PDFs gefunden für den gewählten Scope.");
+    return { files: ["Error"], rawDocs: [] };
+  }
 
-    if (files.length === 0) {
-        console.error(`❌ Keine PDFs im Ordner '${dataDir}' gefunden!`);
-        return { files: ["Error"], rawDocs: [] }
-    }
-
-    for (const file of files) {
-        const filePath = path.join(dataDir, file);
-        const loader = new PDFLoader(filePath);
-        const docs = await loader.load();
-        rawDocs.push(...docs);
-    }
-
-    return { files, rawDocs }
+  return { files, rawDocs };
 }
