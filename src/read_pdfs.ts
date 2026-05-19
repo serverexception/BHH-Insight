@@ -9,7 +9,7 @@ type DocumentReturns = {
     rawDocs: Document<Record<string, any>>[]
 }
 
-export async function readDocuments(): Promise<DocumentReturns> {
+export async function readDocuments(fileFilter?: (file: string) => boolean): Promise<DocumentReturns> {
     const dataDir = "./data";
     const rawDocs = [];
 
@@ -18,7 +18,8 @@ export async function readDocuments(): Promise<DocumentReturns> {
         return { files: ["Error"], rawDocs: [] }
     }
 
-    const files = fs.readdirSync(dataDir).filter(file => file.endsWith(".pdf"));
+    const allFiles = fs.readdirSync(dataDir).filter(file => file.endsWith(".pdf"));
+    const files = fileFilter ? allFiles.filter(fileFilter) : allFiles;
 
     if (files.length === 0) {
         console.error(`❌ Keine PDFs im Ordner '${dataDir}' gefunden!`);

@@ -14,7 +14,8 @@
   "author": "",
   "main": "index.js",
   "scripts": {
-    "start": "tsx src/index.ts"
+    "start": "tsx src/index.ts",
+    "start:web": "tsx src/index.ts --web"
   },
   "keywords": [],
   "dependencies": {
@@ -24,10 +25,13 @@
     "@langchain/google-genai": "^2.1.30",
     "@langchain/openai": "^1.4.5",
     "dotenv": "^16.6.1",
+    "express": "^5.2.1",
     "langchain": "^1.4.0",
-    "pdf-parse": "^2.4.5"
+    "pdf-parse": "^2.4.5",
+    "socket.io": "^4.8.3"
   },
   "devDependencies": {
+    "@types/express": "^5.0.6",
     "@types/node": "^25.7.0",
     "ts-node": "^10.9.2",
     "tsx": "^4.21.0",
