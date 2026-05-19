@@ -22,7 +22,10 @@ export async function startChatLoop(
     ui.display("\n🤖 Denke nach...");
 
     try {
-      const stream = await chain.stream({ input: question });
+      const stream = await chain.stream(
+        { input: question },
+        { configurable: { sessionId: "default" } },
+      );
 
       let sources: string[] = [];
       let streaming = false;

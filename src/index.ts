@@ -1,9 +1,7 @@
-import { createHistoryAwareRetriever } from "@langchain/classic/chains/history_aware_retriever";
 import { createStuffDocumentsChain } from "@langchain/classic/chains/combine_documents";
 import { createRetrievalChain } from "@langchain/classic/chains/retrieval";
 import { InMemoryChatMessageHistory } from "@langchain/core/chat_history";
 import { ChatPromptTemplate, MessagesPlaceholder } from "@langchain/core/prompts";
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore — deprecated but LangGraph is out of scope for this project
 import { RunnableWithMessageHistory } from "@langchain/core/runnables";
 import { RecursiveCharacterTextSplitter } from "@langchain/textsplitters";
@@ -34,11 +32,6 @@ const SYSTEM_PROMPT = `
   {context}
 `;
 
-const CONTEXTUALIZE_PROMPT = `
-  Gegeben eine Chat-Historie und die letzte Benutzerfrage, die sich möglicherweise auf die Chat-Historie bezieht:
-  Formuliere die Frage als eigenständige Frage um, die ohne die Chat-Historie verständlich ist.
-  Beantworte die Frage NICHT — formuliere sie nur um falls nötig, sonst gib sie unverändert zurück.
-`;
 
 async function main() {
   console.log("📚 BHH-Insight\n");
@@ -79,30 +72,17 @@ async function main() {
   const vectorStore = await loadOrBuildVectorStore(files, splitDocs, family.embeddings);
   const retriever = vectorStore.asRetriever({ k: RAG_CONFIG.retrievalK });
 
-  // Prompt für die eigentliche Antwort — inkl. Chat-Historie
+  // Chat-Historie wird direkt im Antwort-Prompt mitgegeben.
+  // Der Retriever nutzt die aktuelle Frage — der LLM sieht den vollen Verlauf.
   const answerPrompt = ChatPromptTemplate.fromMessages([
     ["system", SYSTEM_PROMPT],
     new MessagesPlaceholder("chat_history"),
     ["human", "{input}"],
   ]);
 
-  // Prompt um die Folgefrage anhand der Historie zu reformulieren
-  const contextualizePrompt = ChatPromptTemplate.fromMessages([
-    ["system", CONTEXTUALIZE_PROMPT],
-    new MessagesPlaceholder("chat_history"),
-    ["human", "{input}"],
-  ]);
-
-  // History-aware retriever: reformuliert die Frage bei vorhandener Historie
-  const historyAwareRetriever = await createHistoryAwareRetriever({
-    llm: family.llm,
-    retriever,
-    rephrasePrompt: contextualizePrompt,
-  });
-
   const questionAnswerChain = await createStuffDocumentsChain({ llm: family.llm, prompt: answerPrompt });
   const ragChain = await createRetrievalChain({
-    retriever: historyAwareRetriever,
+    retriever,
     combineDocsChain: questionAnswerChain,
   });
 
